@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zhebao GEO Preview &amp; Config Tool</title>
+<style>
+  :root { --blue:#2563eb; --bg:#f8fafc; --line:#d1d5db; --ink:#0f172a; --muted:#64748b; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "Segoe UI", Arial, sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:#0f172a; color:#fff; padding:14px 20px; }
+  header h1 { margin:0; font-size:18px; }
+  header p { margin:4px 0 0; font-size:12px; color:#94a3b8; }
+  .layout { display:grid; grid-template-columns: 360px 1fr; gap:0; height: calc(100vh - 64px); }
+  .panel { padding:16px; overflow:auto; }
+  .config { border-right:1px solid var(--line); background:#fff; }
+  .preview { background:var(--bg); }
+  label { display:block; font-size:12px; font-weight:600; color:var(--muted); margin:12px 0 4px; text-transform:uppercase; letter-spacing:.03em; }
+  select, input[type=text], textarea { width:100%; padding:8px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  textarea { min-height:64px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size:12px; }
+  .check { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:var(--ink); margin:6px 0; text-transform:none; letter-spacing:0; }
+  .check input { width:auto; }
+  .tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .tag { font-size:12px; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; border-radius:999px; padding:3px 9px; cursor:pointer; user-select:none; }
+  .tag.off { background:#f1f5f9; border-color:var(--line); color:#94a3b8; text-decoration:line-through; }
+  .btnrow { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  button { background:var(--blue); color:#fff; border:0; border-radius:6px; padding:9px 14px; font:inherit; font-weight:600; cursor:pointer; }
+  button.secondary { background:#e2e8f0; color:#0f172a; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:20px 24px; margin-bottom:16px; }
+  .card.rendered h1 { border-bottom:2px solid var(--blue); padding-bottom:.3rem; margin-top:0; }
+  .card.rendered table { border-collapse:collapse; width:100%; margin:1rem 0; }
+  .card.rendered th, .card.rendered td { border:1px solid var(--line); padding:.4rem .6rem; text-align:left; font-size:14px; }
+  .card.rendered th { background:#f3f4f6; }
+  .card.rendered blockquote { border-left:4px solid var(--blue); margin:1rem 0; padding:.4rem 1rem; background:#f8fafc; color:#334155; }
+  .card pre { white-space:pre-wrap; word-break:break-word; font-size:12px; line-height:1.5; margin:0; }
+  .meta { font-size:12px; color:var(--muted); }
+  .sectiontitle { font-size:13px; font-weight:700; color:#0f172a; margin:18px 0 2px; }
+  .warn { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:8px 10px; border-radius:6px; font-size:12px; margin-top:8px; }
+  .ok { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:8px 10px; border-radius:6px; font-size:12px; margin-top:8px; }
+  details summary { cursor:pointer; font-weight:600; font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Zhebao Electrical — GEO Preview &amp; Config Tool</h1>
+  <p>Tune the GEO page structure and prompt constraints per product before running the Python batch generator.</p>
+</header>
+
+<div class="layout">
+  <!-- LEFT: configuration -->
+  <div class="panel config">
+    <label for="dataStatus">Data source</label>
+    <div id="dataStatus" class="meta">loading…</div>
+
+    <label for="productSelect">Product</label>
+    <select id="productSelect"></select>
+
+    <div class="sectiontitle">GEO sections to include</div>
+    <div id="sections">
+      <label class="check"><input type="checkbox" data-sec="spec" checked> Specification table</label>
+      <label class="check"><input type="checkbox" data-sec="standards" checked> International standards &amp; compliance</label>
+      <label class="check"><input type="checkbox" data-sec="scenarios" checked> Application scenarios</label>
+      <label class="check"><input type="checkbox" data-sec="faq" checked> GEO-targeted FAQ</label>
+      <label class="check"><input type="checkbox" data-sec="logistics" checked> Export &amp; logistics estimate</label>
+    </div>
+
+    <div class="sectiontitle">GEO constraints</div>
+    <label class="check"><input type="checkbox" id="banFluff" checked> Ban marketing fluff (facts only)</label>
+    <label class="check"><input type="checkbox" id="lockNumbers" checked> Copy numeric ratings verbatim</label>
+
+    <label for="temperature">Temperature (LLM creativity)</label>
+    <input type="text" id="temperature" value="0.3" />
+
+    <div class="sectiontitle">Application-scenario tags</div>
+    <div class="tags" id="scenarioTags"></div>
+
+    <div class="btnrow">
+      <button id="copyMd">Copy Markdown</button>
+      <button id="downloadMd" class="secondary">Download .md</button>
+      <button id="showPrompt" class="secondary">Show system prompt</button>
+    </div>
+    <div id="validation"></div>
+  </div>
+
+  <!-- RIGHT: preview -->
+  <div class="panel preview">
+    <div class="card rendered" id="rendered"></div>
+    <details class="card">
+      <summary>Raw Markdown</summary>
+      <pre id="rawMd"></pre>
+    </details>
+    <details class="card" id="promptCard" style="display:none">
+      <summary>System prompt that will be sent to the model</summary>
+      <pre id="promptText"></pre>
+    </details>
+  </div>
+</div>
+
+<script>
+// ---- Minimal embedded fallback so the tool works over file:// too. ----
+const FALLBACK = [
+  {model:"KYN28A-12, GZS1-12", name:"AC armored removable metal enclosed switchgear",
+   category:"Switchgear / RMU", brand:"Zhebao", rated_frequency:"AC 50Hz / 60Hz",
+   rated_voltage:"12kV", power_frequency_withstand_voltage:"42/48kV",
+   rated_impulse_withstand_voltage:"75/85kV", rated_current:"630A 1250A 1600A 2000A 2500A 3150A 4000A",
+   short_time_withstand_current:"25kA 31.5kA 40kA", short_circuit_breaking_current:"25kA 31.5kA 40kA",
+   protection_degree:"IP40, door open IP2x", standard:"IEC62271-200",
+   dimension:"2260H *650/800/1000W *1450/1610D (mm)"}
+];
+
+// ---- GEO domain knowledge (mirrors src/prompts.py) ----
+const CATEGORY_TO_DOMAIN = {
+  "Switchgear / RMU":"switchgear", "Circuit Breaker":"circuit_breaker",
+  "SF6 Load Break Switch":"switchgear", "Prefabricated Substation":"substation",
+  "Distribution Transformer":"transformer", "Outdoor Primary Equipment":"switchgear",
+  "Distribution Box":"lv_distribution", "Power Quality / DC Supply":"lv_distribution"
+};
+const DOMAIN_STANDARDS = {
+  switchgear:["IEC 62271-200 (AC metal-enclosed switchgear, 1-52 kV)","IEC 62271-1 (common specifications for HV switchgear)","IEC 62271-100 (HV AC circuit-breakers)"],
+  circuit_breaker:["IEC 62271-100 (HV AC circuit-breakers)","IEC 62271-1 (common specifications)","IEC 60694 (legacy common clauses)"],
+  transformer:["IEC 60076-11 (dry-type power transformers)","IEC 60076-1 (power transformers, general)"],
+  substation:["IEC 62271-202 (HV/LV prefabricated substations)","IEC 62271-200 (enclosed MV switchgear inside)"],
+  lv_distribution:["IEC 61439-1/-2 (LV switchgear & controlgear assemblies)","IEC 60529 (IP ingress protection ratings)"],
+  generic:["IEC 62271 series (HV switchgear)","IEC 61439 series (LV assemblies)"]
+};
+const DOMAIN_SCENARIOS = {
+  switchgear:["mining and quarry sites with high dust and vibration","unstable grids with frequent voltage sags and reclosing duty","emergency feeder replacement after flood or storm damage","industrial parks needing compact footprint per panel"],
+  circuit_breaker:["frequent switching duty on motor and capacitor banks","retrofit of ageing oil/SF6 breakers in legacy substations","high-altitude derating for plateau projects"],
+  transformer:["indoor distribution in hospitals, malls and high-rise where oil is banned","high-humidity coastal and tropical climates","fire-safety-critical sites requiring cast-resin dry type"],
+  substation:["rapid rural electrification and temporary construction power","renewable plant collector stations (solar / wind farms)","fast container-style deployment to remote infrastructure"],
+  lv_distribution:["power distribution for factories and commercial buildings","harsh outdoor/site distribution requiring high IP rating","energy-efficiency and power-quality upgrades"],
+  generic:["infrastructure projects in emerging markets","unstable grid conditions and emergency replacement"]
+};
+const SPEC_LABELS = [
+  ["rated_frequency","Rated frequency"],
+  ["rated_voltage","Rated voltage (Ue/Ur)"],
+  ["rated_insulation_voltage","Rated insulation voltage (Ui)"],
+  ["power_frequency_withstand_voltage","Power-frequency withstand voltage (1 min)"],
+  ["rated_impulse_withstand_voltage","Rated impulse withstand voltage"],
+  ["rated_current","Rated current (Ir)"],
+  ["short_time_withstand_current","Short-time withstand current (Icw)"],
+  ["short_circuit_breaking_current","Short-circuit breaking current"],
+  ["short_circuit_making_current","Short-circuit making current"],
+  ["capacity","Rated capacity"],
+  ["protection_degree","Protection degree (IP)"],
+  ["standard","Standard"],
+  ["dimension","Dimensions (HxWxD)"]
+];
+
+let PRODUCTS = [];
+let activeScenarios = [];
+
+function domainOf(p){ return CATEGORY_TO_DOMAIN[p.category] || "generic"; }
+function val(p,k){ return (p[k]==null?"":String(p[k])).trim(); }
+
+function buildMarkdown(p){
+  const dom = domainOf(p);
+  const sec = {};
+  document.querySelectorAll('[data-sec]').forEach(c => sec[c.dataset.sec]=c.checked);
+  const model = val(p,'model') || "(model n/a)";
+  const name = val(p,'name') || "Electrical product";
+  let md = `# ${model} — ${name}\n\n`;
+  md += `> ${name} (${model}) from Zhebao Electrical (Hangzhou) Group, a Siemens/ABB/Schneider licensed manufacturer since 1993. Rated for ${val(p,'rated_voltage')||'its stated voltage'} service and built to ${val(p,'standard')||'the applicable IEC standard'}.\n\n`;
+
+  if(sec.spec){
+    md += `## Technical Specifications\n\n| Parameter | Value |\n| --- | --- |\n`;
+    SPEC_LABELS.forEach(([k,lab])=>{ if(val(p,k)) md += `| ${lab} | ${val(p,k)} |\n`; });
+    md += `\n`;
+  }
+  if(sec.standards){
+    md += `## International Standards & Compliance\n\n`;
+    if(val(p,'standard')) md += `- Declared in catalogue: **${val(p,'standard')}**\n`;
+    DOMAIN_STANDARDS[dom].forEach(s=> md += `- ${s}\n`);
+    md += `\n`;
+  }
+  if(sec.scenarios){
+    md += `## Application Scenarios\n\n`;
+    activeScenarios.forEach(s=> md += `- ${s.charAt(0).toUpperCase()+s.slice(1)}.\n`);
+    md += `\n`;
+  }
+  if(sec.faq){
+    const s0 = activeScenarios[0] || DOMAIN_SCENARIOS[dom][0];
+    md += `## GEO-Targeted FAQ\n\n`;
+    md += `**Q: What is the ${model} and what is it used for?**\nA: It is a ${name.toLowerCase()} rated at ${val(p,'rated_voltage')||'the stated voltage'}, used in ${s0}.\n\n`;
+    md += `**Q: Which international standard does the ${model} comply with?**\nA: ${val(p,'standard')||DOMAIN_STANDARDS[dom][0]}.\n\n`;
+    md += `**Q: What rated current options are available?**\nA: ${val(p,'rated_current')||'Contact Zhebao for the available current ratings.'}\n\n`;
+    md += `**Q: What is the protection (IP) degree?**\nA: ${val(p,'protection_degree')||'Refer to the project specification.'}\n\n`;
+    md += `**Q: Can it be supplied for high-altitude / plateau projects?**\nA: Yes — derated variants are available; share the site altitude and ambient conditions when inquiring.\n\n`;
+  }
+  if(sec.logistics){
+    const dim = val(p,'dimension');
+    md += `## Export & Logistics (estimate)\n\n`;
+    md += (dim? `Catalogue panel dimensions are **${dim}**. ` : `Crate to the panel's outer dimensions. `);
+    md += `Estimate (verify before booking): floor-standing MV/LV panels are typically exported in plywood sea-worthy crates; a standard 40ft HC container loads roughly 6-10 single panels depending on width. Bundle spare parts and operating tools in a separate labelled crate.\n`;
+  }
+  return md;
+}
+
+// ---- tiny markdown renderer (headings, tables, bold, blockquote, lists) ----
+function renderMarkdown(md){
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lines = md.split('\n'); let html=''; let i=0;
+  while(i<lines.length){
+    let line=lines[i];
+    if(/^\|.*\|$/.test(line) && /^\|[\s:|-]+\|$/.test(lines[i+1]||'')){
+      const header=line.split('|').slice(1,-1).map(c=>c.trim());
+      i+=2; let body='';
+      while(i<lines.length && /^\|.*\|$/.test(lines[i])){
+        const cells=lines[i].split('|').slice(1,-1).map(c=>inline(c.trim()));
+        body+='<tr>'+cells.map(c=>`<td>${c}</td>`).join('')+'</tr>'; i++;
+      }
+      html+='<table><thead><tr>'+header.map(c=>`<th>${inline(c)}</th>`).join('')+'</tr></thead><tbody>'+body+'</tbody></table>';
+      continue;
+    }
+    if(/^### /.test(line)){ html+=`<h3>${inline(line.slice(4))}</h3>`; }
+    else if(/^## /.test(line)){ html+=`<h2>${inline(line.slice(3))}</h2>`; }
+    else if(/^# /.test(line)){ html+=`<h1>${inline(line.slice(2))}</h1>`; }
+    else if(/^> /.test(line)){ html+=`<blockquote>${inline(line.slice(2))}</blockquote>`; }
+    else if(/^- /.test(line)){
+      let items=''; while(i<lines.length && /^- /.test(lines[i])){ items+=`<li>${inline(lines[i].slice(2))}</li>`; i++; }
+      html+=`<ul>${items}</ul>`; continue;
+    }
+    else if(line.trim()===''){ /* skip */ }
+    else { html+=`<p>${inline(line)}</p>`; }
+    i++;
+  }
+  function inline(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>'); }
+  return html;
+}
+
+function systemPrompt(p){
+  const dom = domainOf(p);
+  const banFluff = document.getElementById('banFluff').checked;
+  const lockNumbers = document.getElementById('lockNumbers').checked;
+  const t = document.getElementById('temperature').value;
+  return `You are an expert in international electrical-engineering trade and Generative Engine Optimization (GEO).
+You transform raw technical parameters of Zhebao Electrical products into high-information-density, GEO-compliant English product detail pages that AI answer engines will cite.
+
+Temperature: ${t}
+${banFluff? '• Constraint: NO marketing fluff. State only technical facts and concrete values.' : '• (fluff filter OFF)'}
+${lockNumbers? '• Constraint: NEVER alter a numeric value. Copy kV/A/kA/mm/kVA exactly. 10kV must not become 10V.' : '• (numeric lock OFF)'}
+• Relevant standards: ${DOMAIN_STANDARDS[dom].join('; ')}
+• Application pain points: ${DOMAIN_SCENARIOS[dom].join('; ')}
+• Output: clean GitHub-flavoured Markdown only.`;
+}
+
+// ---- validation: ensure every unit-bearing value survives in the output ----
+function unitTokens(text){
+  const out=new Set();
+  const re=/(\d+(?:\.\d+)?)\s*(kV|kA|kVA|kvar|Ah|mm|Hz|A|V|W)\b/gi; let m;
+  while((m=re.exec(text))) out.add((m[1]+m[2]).toLowerCase());
+  const ipre=/\bIP\s?(\d{1,2}[Xx]?)\b/g; while((m=ipre.exec(text))) out.add('ip'+m[1].toLowerCase());
+  return out;
+}
+function validate(p, md){
+  const gen=unitTokens(md); const missing=[];
+  ["rated_voltage","power_frequency_withstand_voltage","rated_impulse_withstand_voltage","rated_current","short_time_withstand_current","short_circuit_breaking_current","protection_degree","capacity"].forEach(f=>{
+    unitTokens(val(p,f)).forEach(t=>{ if(!gen.has(t)) missing.push(f+':'+t); });
+  });
+  return missing;
+}
+
+function currentProduct(){ return PRODUCTS[document.getElementById('productSelect').value]; }
+
+function refresh(){
+  const p = currentProduct(); if(!p) return;
+  const md = buildMarkdown(p);
+  document.getElementById('rendered').innerHTML = renderMarkdown(md);
+  document.getElementById('rawMd').textContent = md;
+  document.getElementById('promptText').textContent = systemPrompt(p);
+  const missing = validate(p, md);
+  const v = document.getElementById('validation');
+  v.innerHTML = missing.length
+    ? `<div class="warn">⚠ ${missing.length} source rating(s) not found in output:<br>${missing.join('<br>')}</div>`
+    : `<div class="ok">✓ All critical ratings preserved in the generated page.</div>`;
+}
+
+function rebuildScenarioTags(){
+  const p = currentProduct(); if(!p) return;
+  const dom = domainOf(p);
+  activeScenarios = DOMAIN_SCENARIOS[dom].slice();
+  const box = document.getElementById('scenarioTags'); box.innerHTML='';
+  DOMAIN_SCENARIOS[dom].forEach(s=>{
+    const el=document.createElement('span'); el.className='tag'; el.textContent=s;
+    el.onclick=()=>{ el.classList.toggle('off');
+      activeScenarios = DOMAIN_SCENARIOS[dom].filter((x,idx)=>!box.children[idx].classList.contains('off'));
+      refresh();
+    };
+    box.appendChild(el);
+  });
+}
+
+function populateSelect(){
+  const sel=document.getElementById('productSelect'); sel.innerHTML='';
+  PRODUCTS.forEach((p,idx)=>{
+    const o=document.createElement('option'); o.value=idx;
+    o.textContent=`${p.model||'(no model)'} — ${p.name||''}`.slice(0,70);
+    sel.appendChild(o);
+  });
+}
+
+function wire(){
+  document.getElementById('productSelect').addEventListener('change',()=>{ rebuildScenarioTags(); refresh(); });
+  document.querySelectorAll('[data-sec]').forEach(c=>c.addEventListener('change',refresh));
+  ['banFluff','lockNumbers','temperature'].forEach(id=>document.getElementById(id).addEventListener('input',refresh));
+  document.getElementById('copyMd').onclick=()=>navigator.clipboard.writeText(buildMarkdown(currentProduct()));
+  document.getElementById('downloadMd').onclick=()=>{
+    const p=currentProduct(); const blob=new Blob([buildMarkdown(p)],{type:'text/markdown'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=(p.model||'product').replace(/[^a-z0-9._-]/gi,'_')+'.md'; a.click();
+  };
+  document.getElementById('showPrompt').onclick=()=>{ document.getElementById('promptCard').style.display='block'; document.getElementById('promptCard').open=true; };
+}
+
+async function init(){
+  wire();
+  const status=document.getElementById('dataStatus');
+  try{
+    const res=await fetch('../data/zhebao_products.json',{cache:'no-store'});
+    if(!res.ok) throw new Error('http '+res.status);
+    PRODUCTS=await res.json();
+    status.textContent=`Loaded ${PRODUCTS.length} products from data/zhebao_products.json`;
+  }catch(e){
+    PRODUCTS=FALLBACK;
+    status.innerHTML=`Using embedded sample (serve over HTTP to load full catalogue).<br><span class="meta">${e}</span>`;
+  }
+  populateSelect(); rebuildScenarioTags(); refresh();
+}
+init();
+</script>
+</body>
+</html>

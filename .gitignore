@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+# generated GEO pages (curated samples kept under output/samples/)
+output/*.md
+output/*.html
+output/generation_report.json

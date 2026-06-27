@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zhebao Electrical — GEO Content Automation</title>
+<style>
+  body { font-family: system-ui, "Segoe UI", Arial, sans-serif; max-width: 820px; margin: 3rem auto; padding: 0 1rem; line-height: 1.6; color: #0f172a; }
+  h1 { border-bottom: 2px solid #2563eb; padding-bottom: .3rem; }
+  a.button { display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; margin: 8px 8px 8px 0; }
+  ul { padding-left: 1.1rem; }
+  code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
+  .muted { color: #64748b; font-size: 14px; }
+</style>
+</head>
+<body>
+  <h1>Zhebao Electrical — GEO Content Automation</h1>
+  <p>Pipeline that turns structured product parameters from the 2021 catalogue
+     into GEO-optimised English product pages (76 products extracted).</p>
+
+  <p>
+    <a class="button" href="tools/geo_preview.html">Open the GEO Preview &amp; Config Tool</a>
+    <a class="button" href="data/zhebao_products.json" style="background:#475569">View extracted dataset (JSON)</a>
+  </p>
+
+  <h2>Sample generated pages</h2>
+  <ul>
+    <li><a href="output/samples/KYN28A-12__GZS1-12.md">KYN28A-12 — MV armored switchgear</a></li>
+    <li><a href="output/samples/ZBP-12.md">ZBP-12 — vacuum circuit breaker</a></li>
+    <li><a href="output/samples/SCB10.md">SCB10 — dry-type distribution transformer</a></li>
+    <li><a href="output/samples/YBM27-40.5_12kV.md">YBM27 — prefabricated substation</a></li>
+    <li><a href="output/samples/Siemens_NXAirS_LP.md">Siemens NXAirS LP — licensed MV switchgear</a></li>
+  </ul>
+
+  <p class="muted">Batch generation runs via <code>python src/generate_geo.py</code>.
+     See the repository README for full usage.</p>
+</body>
+</html>
