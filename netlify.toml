@@ -2,6 +2,8 @@
 # product dataset (JSON) it fetches, and the sample generated pages. No build
 # step is required, so we publish the repo root as-is.
 [build]
+  # Override the site's UI "Base directory" (set to "1"), which does not exist.
+  base = "."
   publish = "."
   command = ""
 
