@@ -1,0 +1,11 @@
+# The repo is a static bundle: the interactive GEO preview tool, the extracted
+# product dataset (JSON) it fetches, and the sample generated pages. No build
+# step is required, so we publish the repo root as-is.
+[build]
+  publish = "."
+  command = ""
+
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
