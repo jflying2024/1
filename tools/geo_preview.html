@@ -202,7 +202,7 @@ function renderMarkdown(md){
   const lines = md.split('\n'); let html=''; let i=0;
   while(i<lines.length){
     let line=lines[i];
-    if(/^\|.*\|$/.test(line) && /^\|[\s:-]+\|$/.test(lines[i+1]||'')){
+    if(/^\|.*\|$/.test(line) && /^\|[\s:|-]+\|$/.test(lines[i+1]||'')){
       const header=line.split('|').slice(1,-1).map(c=>c.trim());
       i+=2; let body='';
       while(i<lines.length && /^\|.*\|$/.test(lines[i])){
